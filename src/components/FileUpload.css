@@ -1,0 +1,30 @@
+.dropzone {
+  border: 2px dashed #667eea;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  border-color: #5a67d8;
+  background: #edf2f7;
+}
+
+.dropzone.drag-active {
+  border-color: #4c51bf;
+  background: #e2e8f0;
+  transform: scale(1.02);
+}
+
+.dropzone h3 {
+  margin: 16px 0 8px 0;
+  color: #2d3748;
+}
+
+.dropzone p {
+  margin: 4px 0;
+  color: #4a5568;
+}

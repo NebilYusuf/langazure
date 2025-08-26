@@ -1,0 +1,358 @@
+.document-viewer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.document-viewer-modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.document-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.document-viewer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.document-viewer-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.document-viewer-details h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.document-viewer-details p {
+  margin: 4px 0 0 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.document-viewer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.document-viewer-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  background: #f8f9fa;
+}
+
+.text-content {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.text-source-info {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.source-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.source-badge.cached {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.source-badge.extracted {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.source-badge.edited {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.text-data {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.7;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.pdf-viewer {
+  width: 100%;
+  height: 600px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.image-container {
+  text-align: center;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.image-viewer {
+  max-width: 100%;
+  max-height: 500px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.unsupported-content {
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.unsupported-icon {
+  margin-bottom: 20px;
+  color: #6c757d;
+}
+
+.unsupported-content h3 {
+  margin: 0 0 10px 0;
+  color: #495057;
+  font-size: 18px;
+}
+
+.unsupported-content p {
+  margin: 5px 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+/* Text Editor Styles */
+.text-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.text-editor-textarea {
+  background: #ffffff;
+  border: 2px solid #007bff;
+  border-radius: 6px;
+  padding: 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 400px;
+  resize: vertical;
+  color: #495057;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.text-editor-textarea:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.text-editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 8px 0;
+}
+
+.text-editor-actions .btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.text-editor-actions .btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.text-editor-actions .btn-primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.text-editor-actions .btn-primary:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.text-editor-actions .btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.text-editor-actions .btn-secondary:hover {
+  background: #545b62;
+}
+
+.error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #dc3545;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.document-viewer-actions {
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.document-viewer-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.document-viewer-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.document-viewer-actions .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.document-viewer-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.document-viewer-actions .btn-secondary {
+  background: white;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.document-viewer-actions .btn-secondary:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.document-viewer-actions .btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.document-viewer-actions .btn-danger:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .document-viewer-modal {
+    width: 95%;
+    height: 90%;
+    margin: 5% auto;
+  }
+  
+  .document-viewer-header {
+    padding: 15px;
+  }
+  
+  .document-viewer-content {
+    padding: 15px;
+  }
+  
+  .document-viewer-actions {
+    padding: 10px 15px;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .document-viewer-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .text-data {
+    font-size: 13px;
+    max-height: 400px;
+  }
+  
+  .pdf-viewer {
+    height: 400px;
+  }
+  
+  .image-viewer {
+    max-height: 300px;
+  }
+}

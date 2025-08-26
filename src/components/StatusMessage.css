@@ -1,0 +1,28 @@
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #667eea;
+}
+
+.loading p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.error {
+  background: #fed7d7;
+  border: 1px solid #feb2b2;
+  color: #c53030;
+  padding: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.success {
+  background: #c6f6d5;
+  border: 1px solid #9ae6b4;
+  color: #22543d;
+  padding: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+}
