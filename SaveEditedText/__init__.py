@@ -6,10 +6,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.azure_storage import store_extracted_text
+from shared.sharepoint_storage import store_extracted_text
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    """Save edited text to Azure Blob Storage."""
+    """Save edited text to SharePoint."""
     
     # Handle CORS preflight requests
     if req.method == 'OPTIONS':
@@ -24,16 +24,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
     
     try:
-        # Extract blob_name from route parameters
+        # Extract filename from route parameters
         route_params = req.route_params
-        blob_name = route_params.get('blob_name')
+        filename = route_params.get('filename')
         
-        if not blob_name:
+        if not filename:
             return func.HttpResponse(
-                json.dumps({'error': 'blob_name parameter is required'}),
+                json.dumps({'error': 'filename parameter is required'}),
                 status_code=400,
                 mimetype='application/json'
             )
+        
+        # Get folder name from query parameters (default to first available folder)
+        folder_name = req.params.get('folder', 'Shared Documents')
+        
         # Parse JSON body
         try:
             body = req.get_json()
@@ -58,13 +62,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 mimetype='application/json'
             )
         
-        # Store the edited text in Azure
-        store_extracted_text(blob_name, text)
+        # Store the edited text in SharePoint
+        store_extracted_text(filename, text, folder_name)
         
         response_data = {
             'success': True,
-            'message': 'Edited text saved successfully',
-            'savedAt': datetime.utcnow().isoformat()
+            'message': 'Edited text saved successfully to SharePoint',
+            'savedAt': datetime.utcnow().isoformat(),
+            'folder': folder_name
         }
         
         return func.HttpResponse(

@@ -9,16 +9,16 @@ from werkzeug.utils import secure_filename
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.azure_storage import (
-    container_client, 
-    generate_unique_filename, 
-    ContentSettings, 
-    MAX_FILE_SIZE, 
-    SUPPORTED_EXTENSIONS
+from shared.sharepoint_storage import (
+    upload_file_to_sharepoint,
+    generate_unique_filename,
+    MAX_FILE_SIZE,
+    SUPPORTED_EXTENSIONS,
+    get_sharepoint_folders
 )
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    """Upload file to Azure Blob Storage."""
+    """Upload file to SharePoint folder."""
     
     # Handle CORS preflight requests
     if req.method == 'OPTIONS':
@@ -48,32 +48,65 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 }
             )
         
+        # Get folder parameter (default to first available folder)
+        folder_name = req.form.get('folder', get_sharepoint_folders()[0] if get_sharepoint_folders() else 'Shared Documents')
+        
+        # Validate folder
+        if folder_name not in get_sharepoint_folders():
+            return func.HttpResponse(
+                json.dumps({'error': f'Invalid folder. Must be one of: {", ".join(get_sharepoint_folders())}'}),
+                status_code=400,
+                mimetype='application/json',
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
+            )
+        
         # Generate unique filename
         original_filename = uploaded_file.filename
-        unique_filename = generate_unique_filename(original_filename)
-        
-        # Upload to Azure Blob Storage
-        blob_client = container_client.get_blob_client(unique_filename)
+        unique_filename = generate_unique_filename(original_filename, folder_name)
         
         # Read file content
         file_content = uploaded_file.read()
         
-        # Upload with metadata
-        blob_client.upload_blob(
-            file_content,
-            overwrite=True,
-            metadata={
-                'originalName': original_filename,
-                'uploadedAt': datetime.utcnow().isoformat()
-            }
-        )
+        # Check file size
+        if len(file_content) > MAX_FILE_SIZE:
+            return func.HttpResponse(
+                json.dumps({'error': f'File size exceeds maximum allowed size of {MAX_FILE_SIZE / (1024*1024):.1f}MB'}),
+                status_code=400,
+                mimetype='application/json',
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
+            )
+        
+        # Upload to SharePoint
+        result = upload_file_to_sharepoint(file_content, unique_filename, folder_name)
+        
+        if not result['success']:
+            return func.HttpResponse(
+                json.dumps({'error': f'Failed to upload file: {result["error"]}'}),
+                status_code=500,
+                mimetype='application/json',
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
+            )
         
         response_data = {
             'success': True,
-            'message': 'File uploaded successfully',
+            'message': 'File uploaded successfully to SharePoint',
             'filename': unique_filename,
             'originalName': original_filename,
-            'size': len(file_content)
+            'folder': folder_name,
+            'size': len(file_content),
+            'url': result.get('url', '')
         }
         
         return func.HttpResponse(
@@ -90,7 +123,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as error:
         print(f"Upload error: {error}")
         return func.HttpResponse(
-            json.dumps({'error': 'Failed to upload file'}),
+            json.dumps({'error': 'Failed to upload file to SharePoint'}),
             status_code=500,
             mimetype='application/json',
             headers={

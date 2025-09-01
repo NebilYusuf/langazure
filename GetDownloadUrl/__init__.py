@@ -5,22 +5,22 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.azure_storage import get_download_url
+from shared.sharepoint_storage import get_download_url
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    """Get secure download URL for a file."""
+    """Get download URL for a SharePoint file."""
     try:
-        # Extract blob_name from route parameters
+        # Extract file_url from route parameters
         route_params = req.route_params
-        blob_name = route_params.get('blob_name')
+        file_url = route_params.get('file_url')
         
-        if not blob_name:
+        if not file_url:
             return func.HttpResponse(
-                json.dumps({'error': 'blob_name parameter is required'}),
+                json.dumps({'error': 'file_url parameter is required'}),
                 status_code=400,
                 mimetype='application/json'
             )
-        result = get_download_url(blob_name)
+        result = get_download_url(file_url)
         
         if result['success']:
             return func.HttpResponse(

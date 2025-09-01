@@ -1,17 +1,19 @@
 # Text extraction libraries
-pypdf==4.2.0
-python-docx==1.1.2
+PyPDF2==3.0.1
+python-docx==1.2.0
 chardet==5.2.0
 
 # Web framework
 Flask==3.0.0
 Flask-CORS==4.0.0
 
-# Azure Storage
-azure-storage-blob==12.19.0
+# SharePoint authentication
+Office365-REST-Python-Client==2.6.2
+msal==1.32.0
 
 # File handling
 Werkzeug==3.0.1
+requests==2.32.3
 
 # Development
 python-dotenv==1.0.0

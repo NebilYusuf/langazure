@@ -9,30 +9,36 @@ export const useDocumentManager = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [selectedFolder, setSelectedFolder] = useState('');
 
-  const loadFiles = useCallback(async () => {
+  const loadFiles = useCallback(async (folder = null) => {
     try {
       setIsLoadingFiles(true);
-      const files = await getFiles();
+      const response = await getFiles(folder);
+      
+      // Handle the new SharePoint response format
+      const files = response.files || response;
       
       // Map the API response to include all necessary fields for the frontend
       const mappedFiles = files.map(file => ({
-        id: file.name || file.id || file.originalName,
+        id: file.url || file.id || file.name || file.originalName,
         name: file.name || file.originalName,
         originalName: file.originalName || file.name,
         size: file.size,
         type: file.type || 'application/octet-stream',
-        blobUrl: file.blobUrl || null,
+        blobUrl: file.url || null,
         uploadedAt: file.uploadedAt,
         lastModified: file.lastModified || file.uploadedAt,
         content: null,
-        hasExtractedText: false
+        hasExtractedText: false,
+        folder: file.folder || 'Shared Documents'
       }));
       
       setDocuments(mappedFiles);
+      setSelectedFolder(folder || '');
     } catch (err) {
       console.error('Error loading files:', err);
-      setError('Failed to load files from storage');
+      setError('Failed to load files from SharePoint');
     } finally {
       setIsLoadingFiles(false);
     }
@@ -45,18 +51,19 @@ export const useDocumentManager = () => {
 
     try {
       const uploadPromises = acceptedFiles.map(async (file) => {
-        const result = await uploadFile(file);
+        const result = await uploadFile(file, file.folder);
         return {
-          id: result.filename || result.blobName || result.name,
-          name: result.filename || result.blobName || result.name,
-          originalName: result.originalName || result.originalName || file.name,
+          id: result.url || result.filename || result.name,
+          name: result.filename || result.name,
+          originalName: result.originalName || file.name,
           size: result.size || file.size,
           type: file.type || 'application/octet-stream',
-          blobUrl: null,
+          blobUrl: result.url || null,
           uploadedAt: new Date().toISOString(),
           lastModified: new Date().toISOString(),
           content: null,
-          hasExtractedText: false
+          hasExtractedText: false,
+          folder: result.folder || file.folder || 'Shared Documents'
         };
       });
 
@@ -69,7 +76,7 @@ export const useDocumentManager = () => {
         return updated;
       });
       
-      setSuccess(`${newDocuments.length} document(s) uploaded successfully to Azure!`);
+      setSuccess(`${newDocuments.length} document(s) uploaded successfully to SharePoint!`);
       
       // Force a re-render to ensure UI updates
       setForceUpdate(prev => prev + 1);
@@ -92,12 +99,12 @@ export const useDocumentManager = () => {
         
         if (supportsExtraction) {
           try {
-            const extractionResult = await extractText(docId);
+            const extractionResult = await extractText(docId, doc.folder);
             console.log('Auto-extraction result for', docId, ':', extractionResult);
             
             // Update document to show it has extracted text
             setDocuments(prev => prev.map(d => 
-              (d.id || d.name || d.originalName) === docId 
+              (d.id || d.name || doc.originalName) === docId 
                 ? { ...d, hasExtractedText: true }
                 : d
             ));
@@ -110,13 +117,13 @@ export const useDocumentManager = () => {
       
     } catch (err) {
       console.error('Upload error:', err);
-      setError('Error uploading documents to Azure. Please try again.');
+      setError('Error uploading documents to SharePoint. Please try again.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const handleDeleteDocument = useCallback(async (id) => {
+  const handleDeleteDocument = useCallback(async (id, folder = null) => {
     if (!id) {
       console.error('Delete: No ID provided!');
       setError('Cannot delete: No document ID provided');
@@ -130,7 +137,7 @@ export const useDocumentManager = () => {
     }
     
     try {
-      const result = await deleteFile(id);
+      const result = await deleteFile(id, folder);
       
       // Remove from local state immediately for better UX
       setDocuments(prev => {
@@ -142,21 +149,21 @@ export const useDocumentManager = () => {
       if (selectedDocument && (selectedDocument.id || selectedDocument.name || selectedDocument.originalName) === id) {
         setSelectedDocument(null);
       }
-      setSuccess('Document deleted successfully from Azure!');
+      setSuccess('Document deleted successfully from SharePoint!');
       
       // Force a re-render to ensure UI updates
       setForceUpdate(prev => prev + 1);
       
       // Also refresh from backend after a short delay to ensure sync
       setTimeout(() => {
-        loadFiles();
+        loadFiles(selectedFolder);
       }, 100);
       
     } catch (err) {
       console.error('Delete error:', err);
-      setError('Failed to delete document from Azure');
+      setError('Failed to delete document from SharePoint');
     }
-  }, [selectedDocument, loadFiles]);
+  }, [selectedDocument, loadFiles, selectedFolder]);
 
   const handleViewDocument = useCallback(async (doc) => {
     try {
@@ -164,7 +171,7 @@ export const useDocumentManager = () => {
       if (!doc.blobUrl) {
         try {
           const downloadUrl = await getDownloadUrl(doc.id || doc.name || doc.originalName);
-          doc.blobUrl = downloadUrl;
+          doc.blobUrl = downloadUrl.downloadUrl;
         } catch (urlError) {
           console.warn('Failed to get download URL:', urlError);
         }
@@ -184,7 +191,7 @@ export const useDocumentManager = () => {
         if (doc.hasExtractedText) {
           console.log('Text already extracted for PDF, fetching cached text');
           try {
-            const extractionResult = await extractText(doc.id || doc.name || doc.originalName);
+            const extractionResult = await extractText(doc.id || doc.name || doc.originalName, doc.folder);
             if (extractionResult.success) {
               doc.content = { 
                 type: 'text', 
@@ -203,7 +210,7 @@ export const useDocumentManager = () => {
           // Try to extract text from PDF
           try {
             console.log('Starting text extraction for:', doc.id || doc.name || doc.originalName);
-            const extractionResult = await extractText(doc.id || doc.name || doc.originalName);
+            const extractionResult = await extractText(doc.id || doc.name || doc.originalName, doc.folder);
             console.log('Extraction result:', extractionResult);
             
             if (extractionResult.success) {
@@ -216,7 +223,7 @@ export const useDocumentManager = () => {
               
               // Update the document in the list to show extracted text is available
               setDocuments(prev => prev.map(d => 
-                (d.id || d.name || d.originalName) === (doc.id || doc.name || doc.originalName) ? { ...d, hasExtractedText: true } : d
+                (d.id || d.name || doc.originalName) === (doc.id || doc.name || doc.originalName) ? { ...d, hasExtractedText: true } : d
               ));
               
               // Force a re-render to ensure UI updates
@@ -224,7 +231,7 @@ export const useDocumentManager = () => {
               
               // Also refresh from backend after a short delay to ensure sync
               setTimeout(() => {
-                loadFiles();
+                loadFiles(selectedFolder);
               }, 100);
               
             } else {
@@ -248,7 +255,7 @@ export const useDocumentManager = () => {
         if (doc.hasExtractedText) {
           console.log('Text already extracted for Word document, fetching cached text');
           try {
-            const extractionResult = await extractText(doc.id || doc.name || doc.originalName);
+            const extractionResult = await extractText(doc.id || doc.name || doc.originalName, doc.folder);
             if (extractionResult.success) {
               doc.content = { 
                 type: 'text', 
@@ -266,7 +273,7 @@ export const useDocumentManager = () => {
           // Try to extract text from Word documents
           try {
             console.log('Starting Word text extraction for:', doc.id || doc.name || doc.originalName);
-            const extractionResult = await extractText(doc.id || doc.name || doc.originalName);
+            const extractionResult = await extractText(doc.id || doc.name || doc.originalName, doc.folder);
             console.log('Word extraction result:', extractionResult);
             
             if (extractionResult.success) {
@@ -279,7 +286,7 @@ export const useDocumentManager = () => {
               
               // Update the document in the list to show extracted text is available
               setDocuments(prev => prev.map(d => 
-                (d.id || d.name || d.originalName) === (doc.id || doc.name || doc.originalName) ? { ...d, hasExtractedText: true } : d
+                (d.id || d.name || doc.originalName) === (doc.id || doc.name || doc.originalName) ? { ...d, hasExtractedText: true } : d
               ));
               
               // Force a re-render to ensure UI updates
@@ -287,7 +294,7 @@ export const useDocumentManager = () => {
               
               // Also refresh from backend after a short delay to ensure sync
               setTimeout(() => {
-                loadFiles();
+                loadFiles(selectedFolder);
               }, 100);
               
             } else {
@@ -311,6 +318,11 @@ export const useDocumentManager = () => {
       console.error('Error loading document content:', err);
       setError('Failed to load document content');
     }
+  }, [loadFiles, selectedFolder]);
+
+  const handleFolderChange = useCallback((folder) => {
+    setSelectedFolder(folder);
+    loadFiles(folder);
   }, [loadFiles]);
 
   const clearMessages = useCallback(() => {
@@ -327,12 +339,14 @@ export const useDocumentManager = () => {
     error,
     success,
     forceUpdate,
+    selectedFolder,
     
     // Actions
     loadFiles,
     handleUpload,
     handleDeleteDocument,
     handleViewDocument,
+    handleFolderChange,
     setSelectedDocument,
     clearMessages
   };

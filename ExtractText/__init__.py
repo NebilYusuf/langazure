@@ -8,15 +8,15 @@ from pathlib import Path
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.azure_storage import (
-    container_client, 
+from shared.sharepoint_storage import (
     get_stored_extracted_text, 
     extract_text_from_file, 
-    store_extracted_text
+    store_extracted_text,
+    download_file_from_sharepoint
 )
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    """Extract text from document."""
+    """Extract text from document in SharePoint."""
     
     # Handle CORS preflight requests
     if req.method == 'OPTIONS':
@@ -31,38 +31,56 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
     
     try:
-        # Extract blob_name from route parameters
+        # Extract file_url from route parameters
         route_params = req.route_params
-        blob_name = route_params.get('blob_name')
+        file_url = route_params.get('file_url')
         
-        if not blob_name:
+        if not file_url:
             return func.HttpResponse(
-                json.dumps({'error': 'blob_name parameter is required'}),
+                json.dumps({'error': 'file_url parameter is required'}),
                 status_code=400,
                 mimetype='application/json'
             )
+        
+        # Get folder name from query parameters (default to first available folder)
+        folder_name = req.params.get('folder', 'Shared Documents')
+        
+        # Extract filename from URL for storage purposes
+        filename = Path(file_url).name
+        
         # First, try to get stored extracted text
-        stored_text = get_stored_extracted_text(blob_name)
+        stored_text = get_stored_extracted_text(filename, folder_name)
         
         if stored_text:
-                    return func.HttpResponse(
-            json.dumps(stored_text),
-            status_code=200,
-            mimetype='application/json',
-            headers={
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-            }
-        )
+            return func.HttpResponse(
+                json.dumps(stored_text),
+                status_code=200,
+                mimetype='application/json',
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
+            )
         
         # If no stored text, extract from the original document
-        blob_client = container_client.get_blob_client(blob_name)
+        file_content = download_file_from_sharepoint(file_url)
+        
+        if not file_content:
+            return func.HttpResponse(
+                json.dumps({'error': 'Failed to download file from SharePoint'}),
+                status_code=400,
+                mimetype='application/json',
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                }
+            )
         
         # Download to temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(blob_name).suffix) as temp_file:
-            download_stream = blob_client.download_blob()
-            temp_file.write(download_stream.readall())
+        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(filename).suffix) as temp_file:
+            temp_file.write(file_content)
             temp_file_path = temp_file.name
         
         try:
@@ -70,11 +88,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             extraction_result = extract_text_from_file(temp_file_path)
             
             if extraction_result['success']:
-                # Store the extracted text in Azure
+                # Store the extracted text in SharePoint
                 try:
-                    store_extracted_text(blob_name, extraction_result['text'])
+                    store_extracted_text(filename, extraction_result['text'], folder_name)
                 except Exception as store_error:
-                    print(f"Failed to store extracted text for {blob_name}: {store_error}")
+                    print(f"Failed to store extracted text for {filename}: {store_error}")
                 
                 response_data = {
                     'success': True,

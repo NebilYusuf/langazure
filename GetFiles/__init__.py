@@ -6,10 +6,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.azure_storage import container_client
+from shared.sharepoint_storage import get_files_from_sharepoint, get_sharepoint_folders
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    """Get list of files from Azure Blob Storage."""
+    """Get list of files from SharePoint folders."""
     
     # Handle CORS preflight requests
     if req.method == 'OPTIONS':
@@ -24,25 +24,23 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
     
     try:
-        # List all blobs in the container
-        blobs = container_client.list_blobs()
+        # Get query parameters
+        folder_name = req.params.get('folder')
         
-        files = []
-        for blob in blobs:
-            # Skip the documents_text folder
-            if not blob.name.startswith('documents_text/'):
-                files.append({
-                    'id': blob.name,
-                    'name': blob.name,
-                    'originalName': blob.metadata.get('originalName', blob.name) if blob.metadata else blob.name,
-                    'size': blob.size,
-                    'type': blob.content_settings.content_type if blob.content_settings else 'application/octet-stream',
-                    'uploadedAt': blob.metadata.get('uploadedAt', blob.creation_time.isoformat()) if blob.metadata else blob.creation_time.isoformat(),
-                    'lastModified': blob.last_modified.isoformat() if blob.last_modified else None
-                })
+        # List all files from SharePoint folders
+        files = get_files_from_sharepoint(folder_name)
+        
+        # Add folder information
+        folders = get_sharepoint_folders()
+        
+        response_data = {
+            'files': files,
+            'folders': folders,
+            'totalFiles': len(files)
+        }
         
         return func.HttpResponse(
-            json.dumps(files),
+            json.dumps(response_data),
             status_code=200,
             mimetype='application/json',
             headers={
@@ -55,7 +53,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as error:
         print(f"Get files error: {error}")
         return func.HttpResponse(
-            json.dumps({'error': 'Failed to get files'}),
+            json.dumps({'error': 'Failed to get files from SharePoint'}),
             status_code=500,
             mimetype='application/json',
             headers={
